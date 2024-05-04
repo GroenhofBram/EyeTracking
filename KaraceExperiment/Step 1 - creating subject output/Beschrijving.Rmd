@@ -1,0 +1,6 @@
+Dit R script leest twee data bestanden in:
+
+-   **subject-58_f.csv** (data bestand gemaakt door het programma Open Sesame waarop het experiment staat, participant nummer 58; de f staat hier voor de verb-Final conditie)
+-   **subject-58-TOBII_output-f.tsv** (data bestand gemaakt door de Tobii eye-tracker, participant nummer 58; de f staat hier voor de verb-Final conditie)
+
+Het R script genereerd uiteindelijk het volgende output-bestand: - **subject-58-f-output.csv** (dit ziet er al beter uit om te analyseren, maar we zijn er dan nog niet)
