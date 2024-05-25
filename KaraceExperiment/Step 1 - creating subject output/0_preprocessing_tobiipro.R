@@ -2,6 +2,7 @@ library(magrittr) # need to run every time you start R and want to use %>%
 library(dplyr)
 library(data.table)
 library(DataCombine)
+library(tidyverse)
 
 setwd("KaraceExperiment/Step 1 - creating subject output") #setting working directory
 
@@ -58,9 +59,13 @@ names(data)[5] <- "event"
 names(data)[6] <- "x"
 names(data)[7] <- "y"
 names(data)[8] <- "validity"
+head(data)
+
+
 
 ## clean the data, keep the rows with NA or 1 in validity column
 data <- subset(data, validity == 1 | is.na(validity))
+head(data)
 
 ## round the timestamp column
 data$timestamp <- round(as.numeric(data$timestamp), digits = 0)
@@ -70,6 +75,7 @@ data <- data[order(data$timestamp),]
 
 ## find start of each trial
 events <- subset(data, grepl("start_trial", event, fixed=TRUE))
+head(events)
 
 ## move timestamp column to trial_start column
 events$trial_start <- events$timestamp
@@ -87,6 +93,7 @@ if (nrow(events) != noftrials) {
 
 ## remove unnecessary columns
 events <- events[c("trial", "trial_start")]
+head(events)
 
 ## assign trial numbers and trial start times to each row
 for (row in 1:nrow(events)) {

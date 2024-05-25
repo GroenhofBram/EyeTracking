@@ -1,6 +1,7 @@
 # Vragen/Dingen die ik tegen kom in code
 
--   Structuur van `.tsv` bestanden. Toelichting/oplossing komt.
+-   Wat is de start van de trial? Fixation, onset, etc.
+-   functie `correct_event_data()` moet heel veel data langs, dus die duurt even om uit te voeren.
 
 # EyeTracking
 
