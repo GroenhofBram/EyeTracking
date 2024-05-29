@@ -105,6 +105,11 @@ participant_data <- fix_events(csv_file_path = "Data/subject-1114.csv",
                                   tsv_file_path = "Data/subject-1114_TOBII_output.tsv")
 head(participant_data)
 
+# Trial: start_play --> eerste_Offset - 1
+# Fixation = start nieuwe trial, Onset = Pics
+# Timing cue words is niet in output te vinden, todo
+
+# Extra Kolom: Timstamp per event
 
 # 
 csv_data <- read.csv("Data/subject-1114.csv")
@@ -115,6 +120,9 @@ events <- csv_data %>%
   mutate(trial = row_number())
 
 
+# Voorbeeld
+matching_rows <- grep("badkamer_water", participant_data$event)
+filtered_df <- participant_data[matching_rows, ]
 
 
 

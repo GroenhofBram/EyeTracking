@@ -73,6 +73,8 @@ data$timestamp <- round(as.numeric(data$timestamp), digits = 0)
 ## reorder timestamp column (because lines before and after start_trial_X in event column is not ordered)
 data <- data[order(data$timestamp),]
 
+### WE ARE HERE ### 
+
 ## find start of each trial
 events <- subset(data, grepl("start_trial", event, fixed=TRUE))
 head(events)
