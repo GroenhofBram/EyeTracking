@@ -73,7 +73,6 @@ data$timestamp <- round(as.numeric(data$timestamp), digits = 0)
 ## reorder timestamp column (because lines before and after start_trial_X in event column is not ordered)
 data <- data[order(data$timestamp),]
 
-### WE ARE HERE ### 
 
 ## find start of each trial
 events <- subset(data, grepl("start_trial", event, fixed=TRUE))
@@ -130,6 +129,11 @@ data <- data[ -c(5,8) ]
 ## DATA FROM EYETRACKER IS READY AT THIS POINT
 ## LINES BELOW THIS POINT WILL MERGE OPENSESAME FILE WITH EYETRACKER DATA
 
+
+### WE ARE HERE ###
+# OS file ziet er anders uit, wat is belangrijk om te houden?
+
+
 ## read in opensesame file
 os <- read.delim(os_file_name, header = TRUE, sep = ",") #read in the list that belongs to this participant
 
@@ -166,7 +170,7 @@ os <- os[c("list",
 names(os)[2] <- "trial"
 
 ## merge eye tracker data with opensesame file
-data <- merge(data, os, sort = TRUE)
+datamerged <- merge(data, os, sort = TRUE)
 
 ## save merged data because this is the data that is going to be analyzed throughout figen's phd
 #setwd("") #setting working directory

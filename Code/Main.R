@@ -94,6 +94,76 @@ correct_event_data <- function(ts, events_df) {
   }
 }
 
+prep_eyetracker_data <- function(csv_data){
+  # Niewue kolom toevoegen met start- en eindtijden van trials
+  events <- csv_data %>%
+    select(audio) %>%
+    mutate(trial = row_number(),
+           start_name = paste0("start_play_", audio),
+           offset_name = paste0("offset_", audio),
+           start_trial_time = 0,
+           end_trial_time = 0)
+  
+  # Alle benamingen van begin- en eindtijden van trials
+  event_names <- unique(c(events$start_name, events$offset_name))
+  
+  # Vinden van de start- en eindtijden van tirals
+  participant_data_events_only <- participant_data %>%
+    filter(event %in% event_names | event %in% event_names) %>%
+    group_by(event) %>%
+    slice_min(timestamp, with_ties = FALSE) %>%
+    ungroup()
+  
+  # Toevoegen van start- en eindtijden van trials
+  events <- events %>%
+    left_join(
+      participant_data_events_only %>% select(event, timestamp),
+      by = c("start_name" = "event")
+    ) %>%
+    mutate(start_trial_time = ifelse(is.na(timestamp), start_trial_time, timestamp)) %>%
+    select(-timestamp) %>%
+    left_join(
+      participant_data_events_only %>% select(event, timestamp),
+      by = c("offset_name" = "event")
+    ) %>%
+    mutate(end_trial_time = ifelse(is.na(timestamp), end_trial_time, timestamp)) %>%
+    select(-timestamp)
+  
+  
+  
+  is_within_any_interval <- function(timestamp, intervals) {
+    any(map_lgl(intervals, ~ timestamp >= .x$start_trial_time & timestamp <= .x$end_trial_time))
+  }
+  
+  # intervals van timestamps die we willen houden
+  intervals <- events %>% 
+    transmute(start_trial_time, end_trial_time) %>%
+    split(1:nrow(.))
+  
+  # Filteren zodat alleen die timestamps bewaart worden
+  participant_data_relevant <- participant_data %>%
+    rowwise() %>%
+    filter(is_within_any_interval(timestamp, intervals)) %>%
+    ungroup()
+  
+  events_for_merge <- events %>%
+    select(audio, trial, start_trial_time)
+  
+  
+  for (i in 1:nrow(participant_data_relevant)) {
+    event_value <- participant_data_relevant$event[i]
+    matching_row <- which(endsWith(event_value, events$audio))
+    
+    if (length(matching_row) > 0) {
+      participant_data_relevant$trial[i] <- events$trial[matching_row]
+      participant_data_relevant$trial_start[i] <- events$start_trial_time[matching_row]
+    }
+  }
+  
+  head(participant_data_relevant)
+  return(participant_data_relevant)
+}
+
 ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### #####
 
 ##### RUNNING SCRIPT ##### ##### ##### ##### ##### ##### ##### ##### ##### #####
@@ -105,25 +175,15 @@ participant_data <- fix_events(csv_file_path = "Data/subject-1114.csv",
                                   tsv_file_path = "Data/subject-1114_TOBII_output.tsv")
 head(participant_data)
 
-# Trial: start_play --> eerste_Offset - 1
-# Fixation = start nieuwe trial, Onset = Pics
-# Timing cue words is niet in output te vinden, todo
 
-# Extra Kolom: Timstamp per event
-
-# 
+# ASSIGN EVENTS, TIMESTAMPS, TRIALS, AND FILTERING OF NON-RELEVANT EVENTS
+# Data per participant ! MOET GEGENERALISEERD WORDEN !
 csv_data <- read.csv("Data/subject-1114.csv")
+
+participant_data <- prep_eyetracker_data(csv_data)
+
+
 tsv_data <- read.delim("Data/subject-1114_TOBII_output.tsv", sep = "\t")
-
-events <- csv_data %>%
-  select(audio) %>%
-  mutate(trial = row_number())
-
-
-# Voorbeeld
-matching_rows <- grep("badkamer_water", participant_data$event)
-filtered_df <- participant_data[matching_rows, ]
-
 
 
 
