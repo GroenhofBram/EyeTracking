@@ -175,3 +175,11 @@ datamerged <- merge(data, os, sort = TRUE)
 ## save merged data because this is the data that is going to be analyzed throughout figen's phd
 #setwd("") #setting working directory
 write.table(data, file=output_file_name, sep="\t", quote = FALSE) 
+
+
+###
+kara_data <- data
+kara_datamerged <- datamerged
+kara_events <- events
+kara_os <- os
+rm(list = data, events, datamerged, os)

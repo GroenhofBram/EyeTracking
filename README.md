@@ -1,7 +1,29 @@
 # Vragen/Dingen die ik tegen kom in code
 
--   Wat is de start van de trial? Fixation, onset, etc.
--   functie `correct_event_data()` moet heel veel data langs, dus die duurt even om uit te voeren.
+# `Data/Output`: Beschrijving van data
+
+- `participant`: Participant nummer.
+
+- `trial`: Trial nummer.
+
+- `trial_start`: Timestamp die het begin van de trial aangeeft.
+
+- `timestamp`: Timestamp van de huidige regel in het GEHELE experiment.
+
+- `timestamp_relative`: Timestamp relatief aan trial (eerste regel van een trial = 0)
+
+- `event`: Beschrijving event van de regel.
+
+- `x_left	y_left	validity_left`: Informatie linkeroog.
+
+- `x_right	y_right	validity_right`: Informatie rechteroog.
+
+- `can_look`: Placeholder, voor later om aan te geven of de participant op het tijdsmoment van die regel al naar het juiste plaatje kan kijken (TRUE) of niet (FALSE).
+
+- `looking_at_correct`: Placeholder, voor later om aan te geven of de participant op het tijdsmoment van die regel naar het juiste plaatje kijkt (TRUE) of niet (FALSE)
+
+- `pos1	pos2	pos3	pos4`: Placeholders, hier komen de namen van de plaatjes van de trials.
+
 
 # EyeTracking
 

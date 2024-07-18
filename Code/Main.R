@@ -6,6 +6,8 @@ setwd("D:/repos/EyeTracking") # This is on my (Bram's) PC
 
 # # # # # NOTE: FUNCTIONS AT THE TOP SO YOU CAN ALWAYS RUN THE CODE # # # # #
 # # # # #   USING CRTL + A --> CTRL + ENTER                         # # # # #
+
+
 ##### Functions ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### 
 # Find all .csv/.tsv files
 get_filenames <- function(){
@@ -27,8 +29,10 @@ filter_filenames <- function(data_csv_filenames, data_tsv_filenames){
 }
 
 fix_events <- function(csv_file_path, tsv_file_path){
+  # curr_subj <<- csv_file_path
   csv_data <- read.csv(csv_file_path)
   tsv_data <- read.delim(tsv_file_path, sep = "\t")
+  
   subject_number <- gsub("^Data/subject-(\\d+)\\.csv$", "\\1", data_csv_filenames[1])
   trial_count <- 60 
   output_file_name <- paste("subject-", "-output.csv", sep = as.character(subject_number))
@@ -94,6 +98,7 @@ correct_event_data <- function(ts, events_df) {
   }
 }
 
+# Change the eyetracker data (.csv file) and ready it for merging.
 prep_eyetracker_data <- function(csv_data){
   # Niewue kolom toevoegen met start- en eindtijden van trials
   events <- csv_data %>%
@@ -160,35 +165,74 @@ prep_eyetracker_data <- function(csv_data){
     }
   }
   
+  participant_data_relevant <- participant_data_relevant %>%
+    mutate(can_look = FALSE,
+           looking_at_correct = FALSE,
+           pos1 = "placeholder1",
+           pos2 = "placeholder2",
+           pos3 = "placeholder3",
+           pos4 = "placeholder4",
+           timestamp_relative = timestamp - trial_start) %>%
+    select(participant, trial, trial_start, timestamp, timestamp_relative, everything())
+  
   head(participant_data_relevant)
   return(participant_data_relevant)
+}
+
+# Export participant data to a .csv
+export_participant_data <- function(participant_data, curr_subj){
+  output_dir <- "Data/Output"
+  if (!dir.exists(output_dir)) {
+    dir.create(output_dir, recursive = TRUE)
+  }
+  
+
+  relative_path <- sub("^[^/]*/", "", curr_subj)
+  
+
+  new_curr_subj <- file.path(output_dir, relative_path)
+  
+
+  write.csv(participant_data,
+            file = new_curr_subj,
+            row.names = FALSE)
 }
 
 ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### #####
 
 ##### RUNNING SCRIPT ##### ##### ##### ##### ##### ##### ##### ##### ##### #####
-# GET DATA
+#  1: Get all filenames (only ones that have BOTH .tsv and .csv files in the directory)
 get_filenames()
 
-# CLEAN UP DATA
+# CLEAN UP AND EXPORT DATA
+for (participant_no in seq_along(data_csv_filenames)){
+    participant_data <<- fix_events(csv_file_path = data_csv_filenames[participant_no],
+                                   tsv_file_path = data_tsv_filenames[participant_no])
+    csv_data <<- read.csv(data_csv_filenames[participant_no])
+    participant_data <<- prep_eyetracker_data(csv_data)
+    
+    export_participant_data(participant_data,
+                            curr_subj = data_csv_filenames[participant_no])
+}
+
 participant_data <- fix_events(csv_file_path = "Data/subject-1114.csv",
                                   tsv_file_path = "Data/subject-1114_TOBII_output.tsv")
 head(participant_data)
 
 
 # ASSIGN EVENTS, TIMESTAMPS, TRIALS, AND FILTERING OF NON-RELEVANT EVENTS
-# Data per participant ! MOET GEGENERALISEERD WORDEN !
 csv_data <- read.csv("Data/subject-1114.csv")
-
 participant_data <- prep_eyetracker_data(csv_data)
 
-
-tsv_data <- read.delim("Data/subject-1114_TOBII_output.tsv", sep = "\t")
-
-
-
-
+# EXPORT TO CSV
+export_participant_data(participant_data, curr_subj)
 ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### 
+
+
+## TODO
+# Pos kolommen
+# can_look kolom aanmaken
+
 
 
 
