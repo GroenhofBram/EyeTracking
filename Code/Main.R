@@ -201,11 +201,15 @@ export_participant_data <- function(participant_data, curr_subj){
 ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### #####
 
 ##### RUNNING SCRIPT ##### ##### ##### ##### ##### ##### ##### ##### ##### #####
-#  1: Get all filenames (only ones that have BOTH .tsv and .csv files in the directory)
+generate_participant_data_output(){
+  
+}
+#  GET ALL FILENAMES (only when both .csv and .tsv are present)
 get_filenames()
 
 # CLEAN UP AND EXPORT DATA
 for (participant_no in seq_along(data_csv_filenames)){
+  if (participant_no == 1){
     participant_data <<- fix_events(csv_file_path = data_csv_filenames[participant_no],
                                    tsv_file_path = data_tsv_filenames[participant_no])
     csv_data <<- read.csv(data_csv_filenames[participant_no])
@@ -213,25 +217,13 @@ for (participant_no in seq_along(data_csv_filenames)){
     
     export_participant_data(participant_data,
                             curr_subj = data_csv_filenames[participant_no])
+  }
 }
 
-participant_data <- fix_events(csv_file_path = "Data/subject-1114.csv",
-                                  tsv_file_path = "Data/subject-1114_TOBII_output.tsv")
-head(participant_data)
 
-
-# ASSIGN EVENTS, TIMESTAMPS, TRIALS, AND FILTERING OF NON-RELEVANT EVENTS
-csv_data <- read.csv("Data/subject-1114.csv")
-participant_data <- prep_eyetracker_data(csv_data)
-
-# EXPORT TO CSV
-export_participant_data(participant_data, curr_subj)
 ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### 
 
 
-## TODO
-# Pos kolommen
-# can_look kolom aanmaken
 
 
 
