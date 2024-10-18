@@ -4,7 +4,7 @@ library(stringr)
 
 # # # # # NOTE: FUNCTIONS AT THE TOP SO YOU CAN ALWAYS RUN THE CODE # # # # #
 # # # # #   USING CRTL + A --> CTRL + ENTER                         # # # # #
-# # # # # Only do this the first time, as it will take long         # # # # #
+# # # # # NOTE: ENSURE PROPER FILE STRUCTURE                        # # # # #
 
 
 ################################################################################
@@ -745,7 +745,7 @@ fix_events <- function(csv_file_path, tsv_file_path){
   csv_data <- read.csv(csv_file_path)
   tsv_data <- read.delim(tsv_file_path, sep = "\t")
   
-  subject_number <- gsub("^Data/002_Part2/Input/subject-(\\d+)\\.csv$", "\\1", data_csv_filenames[1])
+  subject_number <<- gsub("^Data/002_Part2/Input/subject-(\\d+)\\.csv$", "\\1", data_csv_filenames[1])
   trial_count <- 60 
   output_file_name <- paste("subject-", "-output.csv", sep = as.character(subject_number))
   
@@ -886,7 +886,7 @@ prep_eyetracker_data <- function(csv_data){
            pos3 = "placeholder3",
            pos4 = "placeholder4",
            timestamp_relative = timestamp - trial_start) %>%
-    select(participant, trial, trial_start, timestamp, timestamp_relative, everything())
+    select(trial, trial_start, timestamp, timestamp_relative, everything())
   
   head(participant_data_relevant)
   return(participant_data_relevant)
@@ -918,7 +918,6 @@ export_participant_data <- function(participant_data, curr_subj){
 get_filenames()
 
 # CLEAN UP AND EXPORT DATA
-
 for (participant_no in seq_along(data_csv_filenames)){
   participant_data <<- fix_events(csv_file_path = data_csv_filenames[participant_no],
                                   tsv_file_path = data_tsv_filenames[participant_no])
@@ -947,33 +946,171 @@ rm(list = ls())                                                                #
 ################################################################################
 ################################################################################
 # PART III: Generates .csvs for each participant with each trial and where they look
-#           at. Results used in part II to fill in remaining information.
-# NOTE: Each subject takes about 2-4 minutes to process on my (Bram's) PC.
+#           at. Results used in part I & II to fill in remaining information.
 ################################################################################
 ################################################################################
-# Welke lijst wordt gebruikt?
-
+# Directory 
+setwd("D:/repos/EyeTracking") # This is on my (Bram's) PC
 
 
 
 
 
 ##### Functions ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### #####
-get_files <- function(experiment_list_data_filename, participant_data_dir, cue_onset_times_filename){
-  experiment_list_data <<- read.delim(file = experiment_list_data_filename, header = T)
-  participant_data_filenames <<- data_csv_filenames <- list.files(path = participant_data_dir, pattern = "*.csv", full.names = TRUE, recursive = TRUE)
-  cue_onset_times <<- read.delim(file = cue_onset_times_filename, header = T)
+# Gets the relevant data files to work with.
+get_files <- function(participant_data_dir, YAOA_merged_file){
+  participant_data_csvs <<- list.files(path = participant_data_dir, pattern = "*.csv", full.names = TRUE, recursive = TRUE)
+  YAOA_data <<- read.csv(YAOA_merged_file)
+  
+  YAOA_data <<- YAOA_data %>%
+    mutate(subject_nr = as.character(subject_nr),
+           onset1 = as.numeric(onset1),
+           dur1 = as.numeric(dur1),
+           onset2 = as.numeric(onset2),
+           dur2 = as.numeric(dur2),
+           totdur = as.numeric(totdur)) %>%
+    select(-X)
+}
+
+# Gets the participant number of the participant currently being processed.
+get_participant_number <- function(participant){
+  participant_number <- str_extract(participant, "(?<=subject-)\\d+")
+  return(participant_number)
+}
+
+# Gets the current participant data and makes sure all variables are the right
+#   type/format.
+get_current_participant_data <- function(participant, curr_participant_number){
+  curr_participant_df <- read.csv(participant)
+  curr_participant_df <- curr_participant_df %>%
+    mutate(trial_start = as.numeric(trial_start/1000),
+           timestamp = as.numeric(timestamp/1000),
+           timestamp_relative = as.numeric(timestamp_relative/1000),
+           participant = curr_participant_number)
+  
+  return(curr_participant_df)
+}
+
+# Gets the relevant data from YAOA_data for the current participant
+get_current_participant_YAOA_data <- function(YAOA_data, curr_participant_number){
+  curr_YAOA_data <- YAOA_data %>%
+    filter(curr_participant_number == subject_nr)
+  
+  return(curr_YAOA_data)
+}
+
+# This does all the manipulation. Each part has its own function described below
+fill_participant_df <- function(curr_participant_YAOA, curr_participant_df) {
+  for (row in 1:nrow(curr_participant_YAOA)) {
+    current_audio <- curr_participant_YAOA$audio[row]
+    matching_rows <- grepl(current_audio, curr_participant_df$event)
+    
+    curr_participant_df <- update_positions(curr_participant_df, matching_rows, curr_participant_YAOA, row)
+    curr_participant_df <- set_can_look_flag(curr_participant_df, matching_rows, curr_participant_YAOA, row)
+  }
+  
+  for (row in 1:nrow(curr_participant_df)) {
+    curr_looking_at_pos_l <- get_curr_looking_at_pos(
+      curr_x = round(curr_participant_df$x_left[row],1),
+      curr_y = round(curr_participant_df$y_left[row],1),
+      curr_participant_df,
+      row
+    )
+    
+    curr_looking_at_pos_r <- get_curr_looking_at_pos(
+      curr_x = round(curr_participant_df$x_right[row],1),
+      curr_y = round(curr_participant_df$y_right[row],1),
+      curr_participant_df,
+      row
+    )
+    
+    curr_participant_df$looking_at_L[row] <- curr_looking_at_pos_l
+    curr_participant_df$looking_at_R[row] <- curr_looking_at_pos_r
+  }
+  
+  
+  return(curr_participant_df)
+}
+
+# Part of fill_participant_df: Sets can_look to TRUE for when participant can look
+#   at the target word based on the audio timing.
+set_can_look_flag <- function(curr_participant_df, matching_rows, curr_participant_YAOA, row) {
+  cond_type <- curr_participant_YAOA$CondType[row]
+  
+  if (cond_type == "E") {
+    curr_target_word_cue <- curr_participant_YAOA$onset1[row] * 1000
+  } else if (cond_type == "L") {
+    curr_target_word_cue <- curr_participant_YAOA$onset2[row] * 1000
+  } else {
+    return(curr_participant_df) 
+  }
+  
+  if (!is.na(curr_target_word_cue)) {
+    curr_participant_df[matching_rows & curr_participant_df$timestamp_relative >= curr_target_word_cue, "can_look"] <- TRUE
+  }
+  
+  return(curr_participant_df)
+}
+
+# Part of fill_participant_df: Puts target/distractors in the right place.
+update_positions <- function(curr_participant_df, matching_rows, curr_participant_YAOA, row) {
+  curr_participant_df[matching_rows, c("pos1", "pos2", "pos3", "pos4")] <- 
+    curr_participant_YAOA[row, c("PicTypePos1", "PicTypePos2", "PicTypePos3", "PicTypePos4")]
+  return(curr_participant_df)
+}
+
+# Part of fill_participant_df: Returns where the participant is looking at each
+#   interval.
+get_curr_looking_at_pos <- function(curr_x, curr_y, curr_participant_df, row) {
+  if (curr_x > 0 & curr_x <= 960 & curr_y > 0 & curr_y <= 540) {
+    curr_looking_at_imagetype <- curr_participant_df$pos1[row]
+    return(curr_looking_at_imagetype)
+  } else if (curr_x > 960 & curr_x <= 1920 & curr_y > 0 & curr_y <= 540) {
+    curr_looking_at_imagetype <- curr_participant_df$pos2[row]
+    return(curr_looking_at_imagetype)
+  } else if (curr_x > 0 & curr_x <= 960 & curr_y > 540 & curr_y <= 1080) {
+    curr_looking_at_imagetype <- curr_participant_df$pos3[row]
+    return(curr_looking_at_imagetype)
+  } else if (curr_x > 960 & curr_x <= 1920 & curr_y > 540 & curr_y <= 1080) {
+    curr_looking_at_imagetype <- curr_participant_df$pos4[row]
+    return(curr_looking_at_imagetype)
+  } else {
+    return("out_of_bounds") 
+  }
+}
+
+# Exports the participant_df
+export_participant_df <- function(curr_participant_df){
+  output_dir <- "Data/003_Part3/Output"
+  if (!dir.exists(output_dir)) {
+    dir.create(output_dir, recursive = TRUE)
+  }
+  
+  relative_path <- sub(".*/", "", participant)
+  
+  new_curr_subj <- file.path(output_dir, relative_path)
+  
+  write.csv(curr_participant_df,
+            file = new_curr_subj,
+            row.names = FALSE)
 }
 
 ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### #####
 
 
-
-
 ##### RUNNING SCRIPT ##### ##### ##### ##### ##### ##### ##### ##### ##### #####
-get_files(experiment_list_data_filename = "Data/Output_participant_data/lijst_pos_info.txt",
-          participant_data_dir = "Data/Output_participant_data",
-          cue_onset_times_filename = "Data/Output_participant_data/cue_onsettimes_durations.txt")
+get_files(participant_data_dir = "Data/003_Part3/Input/Participants",
+          YAOA_merged_file = "Data/003_Part3/Input/YAOA_merged.csv")
+
+for (participant in participant_data_csvs){
+  curr_participant_number <- get_participant_number(participant)
+  curr_participant_df <<- get_current_participant_data(participant, curr_participant_number)
+  curr_participant_YAOA <<- get_current_participant_YAOA_data(YAOA_data, curr_participant_number)
+  curr_participant_df <<- fill_participant_df(curr_participant_YAOA, curr_participant_df)
+  export_participant_df(curr_participant_df)
+}
+
+
 
 ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### #####
 
@@ -981,9 +1118,6 @@ get_files(experiment_list_data_filename = "Data/Output_participant_data/lijst_po
 
 
 
-
-
-test_subject <- read.csv(participant_data_filenames[1]) # subject 115
 
 
 
