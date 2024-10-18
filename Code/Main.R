@@ -952,10 +952,6 @@ rm(list = ls())                                                                #
 # Directory 
 setwd("D:/repos/EyeTracking") # This is on my (Bram's) PC
 
-
-
-
-
 ##### Functions ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### #####
 # Gets the relevant data files to work with.
 get_files <- function(participant_data_dir, YAOA_merged_file){
